@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <html lang="zh">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ZHZ的盗版游戏</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Dino Run - 骨架小恐龙</title>
     <style>
-        body {
+        * {
             margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent; /* 去除点击高亮 */
+        }
+        body {
             background: #f0f0f0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             overflow: hidden;
-            touch-action: manipulation;
+            touch-action: manipulation; /* 禁止双击缩放 */
         }
-
         canvas {
             background: #f0f0f0;
             border: 1px solid #ccc;
@@ -24,14 +26,14 @@
             outline: none;
             max-width: 100%;
             height: auto;
+            touch-action: manipulation; /* 确保 canvas 也能处理触摸 */
         }
     </style>
 </head>
-
 <body>
     <canvas id="gameCanvas"></canvas>
     <script>
-        (function () {
+        (function() {
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
 
@@ -50,12 +52,11 @@
 
             const GROUND_Y = 300;
 
-            // 恐龙参数（总高度含腿，躯干高50，腿长10）
             let dino = {
                 x: 80,
-                y: GROUND_Y - 60,   // 初始时脚底刚好在地面
+                y: GROUND_Y - 60,
                 w: 20,
-                h: 60,              // 总高度（躯干50 + 腿10）
+                h: 60,
                 velY: 0,
                 onGround: true
             };
@@ -73,9 +74,11 @@
                 clouds.push({ x: 200 + Math.random() * 600, y: 20 + Math.random() * 80 });
             }
 
-            // ---------- 输入处理 ----------
+            // ---------- 高度兼容的输入处理 ----------
             function handleInput(e) {
-                e.preventDefault();
+                // 阻止默认行为，但要小心不要干扰浏览器
+                if (e.cancelable) e.preventDefault();
+                
                 if (gameOver) {
                     restart();
                     return;
@@ -90,17 +93,37 @@
                 }
             }
 
-            document.addEventListener('keydown', function (e) {
-                if (e.code === 'Space' || e.code === 'ArrowUp' ||
-                    e.key === ' ' || e.key === 'ArrowUp' ||
-                    e.keyCode === 32 || e.keyCode === 38) {
+            // 键盘事件（电脑端）
+            document.addEventListener('keydown', function(e) {
+                if (e.key === ' ' || e.key === 'Space' || 
+                    e.key === 'ArrowUp' || e.code === 'Space' || 
+                    e.code === 'ArrowUp' || e.keyCode === 32 || e.keyCode === 38) {
+                    e.preventDefault();
                     handleInput(e);
                 }
             });
 
-            canvas.addEventListener('mousedown', handleInput);
-            canvas.addEventListener('touchstart', handleInput, { passive: false });
-            canvas.addEventListener('dragstart', function (e) { e.preventDefault(); });
+            // 鼠标点击（电脑端）
+            canvas.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                handleInput(e);
+            });
+
+            // 触摸事件（手机端）—— 注意：passive: false 必须能够调用 preventDefault
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault(); // 阻止页面拖动
+                handleInput(e);
+            }, { passive: false });
+
+            // 防止画布被拖拽选中
+            canvas.addEventListener('dragstart', function(e) { e.preventDefault(); });
+
+            // 备用：如果某些浏览器还是无法阻止，我们在 document 级别阻止 touchmove
+            document.addEventListener('touchmove', function(e) {
+                if (e.target === canvas || canvas.contains(e.target)) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
 
             // ---------- 更新逻辑 ----------
             function updateDino() {
@@ -170,7 +193,7 @@
                 }
             }
 
-            // ---------- 绘制 ----------
+            // ---------- 绘制（兼容旧浏览器） ----------
             function drawGround() {
                 ctx.strokeStyle = 'gray';
                 ctx.lineWidth = 2;
@@ -182,33 +205,32 @@
 
             function drawDino() {
                 const x = dino.x, y = dino.y, w = dino.w, h = dino.h;
-                const bodyHeight = 50;   // 躯干高度
-                const legLen = h - bodyHeight; // 腿长
+                const bodyHeight = 50;
                 ctx.fillStyle = 'black';
                 ctx.strokeStyle = 'black';
                 ctx.lineWidth = 2;
 
-                // 躯干（从头顶到躯干底部）
+                // 躯干
                 ctx.beginPath();
-                ctx.moveTo(x + w / 2, y);
-                ctx.lineTo(x + w / 2, y + bodyHeight);
+                ctx.moveTo(x + w/2, y);
+                ctx.lineTo(x + w/2, y + bodyHeight);
                 ctx.stroke();
 
-                // 头（在躯干顶部）
+                // 头
                 ctx.beginPath();
-                ctx.arc(x + w / 2, y, 5, 0, Math.PI * 2);
+                ctx.arc(x + w/2, y, 5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // 腿（从躯干底部伸出，末端触碰地面）
+                // 腿
                 const legTopY = y + bodyHeight;
-                const legBottomY = y + h; // 地面
+                const legBottomY = y + h;
                 ctx.beginPath();
-                ctx.moveTo(x + w / 2, legTopY);
-                ctx.lineTo(x + w / 2 - 8, legBottomY);
+                ctx.moveTo(x + w/2, legTopY);
+                ctx.lineTo(x + w/2 - 8, legBottomY);
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.moveTo(x + w / 2, legTopY);
-                ctx.lineTo(x + w / 2 + 8, legBottomY);
+                ctx.moveTo(x + w/2, legTopY);
+                ctx.lineTo(x + w/2 + 8, legBottomY);
                 ctx.stroke();
 
             }
@@ -224,7 +246,17 @@
                 ctx.fillStyle = 'white';
                 for (let cloud of clouds) {
                     ctx.beginPath();
-                    ctx.ellipse(cloud.x, cloud.y, 40, 15, 0, 0, Math.PI * 2);
+                    // 椭圆 fallback：用圆角矩形或者直接画圆代替（保证兼容）
+                    // 这里使用一个简单圆角矩形模拟云朵
+                    const cx = cloud.x, cy = cloud.y;
+                    const rw = 40, rh = 15;
+                    ctx.beginPath();
+                    ctx.ellipse ? 
+                        ctx.ellipse(cx, cy, rw, rh, 0, 0, Math.PI * 2) :
+                        // 如果不支持 ellipse，就用两个弧拼凑
+                        (function() {
+                            ctx.arc(cx, cy, rh, 0, Math.PI * 2);
+                        })();
                     ctx.fill();
                 }
             }
@@ -238,17 +270,17 @@
                 if (!started) {
                     ctx.textAlign = 'center';
                     ctx.font = '28px Arial';
-                    ctx.fillText('按空格 / 点击画面 开始', WIDTH / 2, 180);
+                    ctx.fillText('点击画面 / 按空格开始', WIDTH/2, 180);
                 }
                 if (gameOver) {
                     ctx.textAlign = 'center';
                     ctx.font = '30px Arial';
-                    ctx.fillText('Game Over', WIDTH / 2, 180);
+                    ctx.fillText('Game Over', WIDTH/2, 180);
                     ctx.font = '20px Arial';
-                    ctx.fillText('Score: ' + Math.floor(score), WIDTH / 2, 220);
+                    ctx.fillText('Score: ' + Math.floor(score), WIDTH/2, 220);
                     ctx.font = '16px Arial';
                     ctx.fillStyle = 'gray';
-                    ctx.fillText('按空格 / 点击画面 重新开始', WIDTH / 2, 260);
+                    ctx.fillText('这么菜，这就输了啊', WIDTH/2, 260);
                 }
             }
 
@@ -277,13 +309,13 @@
                 drawUI();
 
                 if (started && !gameOver) {
-                    speed += 0.005;
+                    speed += 0.01;
                     updateDino();
                     createObstacle();
                     updateObstacles();
                     updateClouds();
                     checkCollision();
-                    score += 0.1;
+                    score += 1;
                 } else {
                     updateClouds();
                 }
@@ -291,10 +323,8 @@
                 requestAnimationFrame(gameLoop);
             }
 
-            console.log('🦖 小恐龙游戏已启动，按空格或点击画面开始');
             gameLoop();
         })();
     </script>
 </body>
-
 </html>
