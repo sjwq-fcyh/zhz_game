@@ -8,16 +8,32 @@
         * {
             margin: 0;
             padding: 0;
-            -webkit-tap-highlight-color: transparent; /* 去除点击高亮 */
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: manipulation;
         }
         body {
             background: #f0f0f0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            touch-action: manipulation; /* 禁止双击缩放 */
+        }
+        /* 竖屏时自动旋转为横屏 */
+        @media (orientation: portrait) {
+            body {
+                width: 100vh;
+                height: 100vw;
+                transform: rotate(90deg);
+                transform-origin: 0 0;
+                position: absolute;
+                top: 0;
+                left: 100%;
+                margin: 0;
+            }
         }
         canvas {
             background: #f0f0f0;
@@ -26,7 +42,7 @@
             outline: none;
             max-width: 100%;
             height: auto;
-            touch-action: manipulation; /* 确保 canvas 也能处理触摸 */
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -43,7 +59,11 @@
             canvas.height = HEIGHT;
 
             function resize() {
-                const scale = Math.min(window.innerWidth / WIDTH, window.innerHeight / HEIGHT);
+                // 检测是否竖屏（手机），是则交换宽高适应
+                const isPortrait = window.innerHeight > window.innerWidth;
+                const availW = isPortrait ? window.innerHeight : window.innerWidth;
+                const availH = isPortrait ? window.innerWidth : window.innerHeight;
+                const scale = Math.min(availW / WIDTH, availH / HEIGHT);
                 canvas.style.width = (WIDTH * scale) + 'px';
                 canvas.style.height = (HEIGHT * scale) + 'px';
             }
@@ -74,11 +94,8 @@
                 clouds.push({ x: 200 + Math.random() * 600, y: 20 + Math.random() * 80 });
             }
 
-            // ---------- 高度兼容的输入处理 ----------
             function handleInput(e) {
-                // 阻止默认行为，但要小心不要干扰浏览器
                 if (e.cancelable) e.preventDefault();
-                
                 if (gameOver) {
                     restart();
                     return;
@@ -93,7 +110,6 @@
                 }
             }
 
-            // 键盘事件（电脑端）
             document.addEventListener('keydown', function(e) {
                 if (e.key === ' ' || e.key === 'Space' || 
                     e.key === 'ArrowUp' || e.code === 'Space' || 
@@ -103,29 +119,24 @@
                 }
             });
 
-            // 鼠标点击（电脑端）
             canvas.addEventListener('mousedown', function(e) {
                 e.preventDefault();
                 handleInput(e);
             });
 
-            // 触摸事件（手机端）—— 注意：passive: false 必须能够调用 preventDefault
             canvas.addEventListener('touchstart', function(e) {
-                e.preventDefault(); // 阻止页面拖动
+                e.preventDefault();
                 handleInput(e);
             }, { passive: false });
 
-            // 防止画布被拖拽选中
             canvas.addEventListener('dragstart', function(e) { e.preventDefault(); });
 
-            // 备用：如果某些浏览器还是无法阻止，我们在 document 级别阻止 touchmove
             document.addEventListener('touchmove', function(e) {
                 if (e.target === canvas || canvas.contains(e.target)) {
                     e.preventDefault();
                 }
             }, { passive: false });
 
-            // ---------- 更新逻辑 ----------
             function updateDino() {
                 dino.velY += GRAVITY;
                 dino.y += dino.velY;
@@ -193,7 +204,6 @@
                 }
             }
 
-            // ---------- 绘制（兼容旧浏览器） ----------
             function drawGround() {
                 ctx.strokeStyle = 'gray';
                 ctx.lineWidth = 2;
@@ -233,6 +243,11 @@
                 ctx.lineTo(x + w/2 + 8, legBottomY);
                 ctx.stroke();
 
+                // 尾巴
+                ctx.beginPath();
+                ctx.moveTo(x + w/2, y + 20);
+                ctx.lineTo(x + w/2 - 12, y + 10);
+                ctx.stroke();
             }
 
             function drawObstacles() {
@@ -245,18 +260,15 @@
             function drawClouds() {
                 ctx.fillStyle = 'white';
                 for (let cloud of clouds) {
-                    ctx.beginPath();
-                    // 椭圆 fallback：用圆角矩形或者直接画圆代替（保证兼容）
-                    // 这里使用一个简单圆角矩形模拟云朵
                     const cx = cloud.x, cy = cloud.y;
                     const rw = 40, rh = 15;
                     ctx.beginPath();
-                    ctx.ellipse ? 
-                        ctx.ellipse(cx, cy, rw, rh, 0, 0, Math.PI * 2) :
-                        // 如果不支持 ellipse，就用两个弧拼凑
-                        (function() {
-                            ctx.arc(cx, cy, rh, 0, Math.PI * 2);
-                        })();
+                    if (ctx.ellipse) {
+                        ctx.ellipse(cx, cy, rw, rh, 0, 0, Math.PI * 2);
+                    } else {
+                        // 降级为圆形，保证兼容
+                        ctx.arc(cx, cy, rh, 0, Math.PI * 2);
+                    }
                     ctx.fill();
                 }
             }
@@ -278,9 +290,9 @@
                     ctx.fillText('Game Over', WIDTH/2, 180);
                     ctx.font = '20px Arial';
                     ctx.fillText('Score: ' + Math.floor(score), WIDTH/2, 220);
-                    ctx.font = '16px Arial';
+                    ctx.font = '80px Arial';   /* 5倍：16px → 80px */
                     ctx.fillStyle = 'gray';
-                    ctx.fillText('这么菜，这就输了啊', WIDTH/2, 260);
+                    ctx.fillText('这么菜，这就输了啊', WIDTH/2, 300);
                 }
             }
 
@@ -299,7 +311,6 @@
                 started = true;
             }
 
-            // ---------- 主循环 ----------
             function gameLoop() {
                 ctx.clearRect(0, 0, WIDTH, HEIGHT);
                 drawGround();
