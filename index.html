@@ -59,7 +59,6 @@
             canvas.height = HEIGHT;
 
             function resize() {
-                // 检测是否竖屏（手机），是则交换宽高适应
                 const isPortrait = window.innerHeight > window.innerWidth;
                 const availW = isPortrait ? window.innerHeight : window.innerWidth;
                 const availH = isPortrait ? window.innerWidth : window.innerHeight;
@@ -72,6 +71,12 @@
 
             const GROUND_Y = 300;
 
+            // ========== 降低难度参数 ==========
+            const GRAVITY = 0.6;        // 重力变小，下落慢
+            const JUMP_VEL = -12;       // 跳跃初速稍降，配合重力依然可过障碍
+            let speed = 4;              // 初始移动速度更慢
+            const SPEED_INC = 0.003;    // 加速更平缓
+
             let dino = {
                 x: 80,
                 y: GROUND_Y - 60,
@@ -80,11 +85,8 @@
                 velY: 0,
                 onGround: true
             };
-            const GRAVITY = 0.8;
-            const JUMP_VEL = -13;
 
             let obstacles = [];
-            let speed = 5;
             let score = 0;
             let gameOver = false;
             let started = false;
@@ -94,6 +96,7 @@
                 clouds.push({ x: 200 + Math.random() * 600, y: 20 + Math.random() * 80 });
             }
 
+            // ---------- 输入处理 ----------
             function handleInput(e) {
                 if (e.cancelable) e.preventDefault();
                 if (gameOver) {
@@ -137,6 +140,7 @@
                 }
             }, { passive: false });
 
+            // ---------- 更新逻辑 ----------
             function updateDino() {
                 dino.velY += GRAVITY;
                 dino.y += dino.velY;
@@ -157,7 +161,8 @@
                     if (last.x + last.w + minGap > WIDTH) return;
                 }
 
-                const prob = 0.02 + score * 0.0003;
+                // 降低生成概率
+                const prob = 0.015 + score * 0.0002;
                 if (Math.random() < prob) {
                     const h = [30, 40, 50][Math.floor(Math.random() * 3)];
                     const w = 12 + Math.floor(Math.random() * 9);
@@ -204,6 +209,7 @@
                 }
             }
 
+            // ---------- 绘制 ----------
             function drawGround() {
                 ctx.strokeStyle = 'gray';
                 ctx.lineWidth = 2;
@@ -266,7 +272,6 @@
                     if (ctx.ellipse) {
                         ctx.ellipse(cx, cy, rw, rh, 0, 0, Math.PI * 2);
                     } else {
-                        // 降级为圆形，保证兼容
                         ctx.arc(cx, cy, rh, 0, Math.PI * 2);
                     }
                     ctx.fill();
@@ -290,7 +295,7 @@
                     ctx.fillText('Game Over', WIDTH/2, 180);
                     ctx.font = '20px Arial';
                     ctx.fillText('Score: ' + Math.floor(score), WIDTH/2, 220);
-                    ctx.font = '80px Arial';   /* 5倍：16px → 80px */
+                    ctx.font = '80px Arial';
                     ctx.fillStyle = 'gray';
                     ctx.fillText('这么菜，这就输了啊', WIDTH/2, 300);
                 }
@@ -305,12 +310,13 @@
                 dino.y = GROUND_Y - dino.h;
                 dino.velY = 0;
                 dino.onGround = true;
-                speed = 5;
+                speed = 4;
                 score = 0;
                 gameOver = false;
                 started = true;
             }
 
+            // ---------- 主循环 ----------
             function gameLoop() {
                 ctx.clearRect(0, 0, WIDTH, HEIGHT);
                 drawGround();
@@ -320,7 +326,7 @@
                 drawUI();
 
                 if (started && !gameOver) {
-                    speed += 0.005;
+                    speed += SPEED_INC;
                     updateDino();
                     createObstacle();
                     updateObstacles();
