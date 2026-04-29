@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Dino Run - 骨架小恐龙</title>
+    <title>zhz的game</title>
     <style>
         * {
             margin: 0;
@@ -75,7 +75,7 @@
             const GRAVITY = 0.6;        // 重力变小，下落慢
             const JUMP_VEL = -12;       // 跳跃初速稍降，配合重力依然可过障碍
             let speed = 4;              // 初始移动速度更慢
-            const SPEED_INC = 0.003;    // 加速更平缓
+            const SPEED_INC = 0.004;    // 加速更平缓
 
             let dino = {
                 x: 80,
@@ -249,11 +249,7 @@
                 ctx.lineTo(x + w/2 + 8, legBottomY);
                 ctx.stroke();
 
-                // 尾巴
-                ctx.beginPath();
-                ctx.moveTo(x + w/2, y + 20);
-                ctx.lineTo(x + w/2 - 12, y + 10);
-                ctx.stroke();
+
             }
 
             function drawObstacles() {
